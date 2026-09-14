@@ -1,1 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Closet</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #fff0f5;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    input, select, button.add-btn {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ffb6c1;
+      border-radius: 12px;
+      box-sizing: border-box;
+      font-size: 1em;
+    }
+    button.add-btn {
+      background-color: #ff69b4;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    /* タブのスタイル */
+    .tabs-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 25px;
+      margin-bottom: 15px;
+      overflow-x: auto; /* 横スクロール可能に */
+      padding-bottom: 5px;
+    }
+    .tab {
+      padding: 8px 16px;
+      background: #ffe4e1;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-size: 0.9em;
+      color: #d1497b;
+      border: none;
+    }
+    .tab.active {
+      background: #d1497b;
+      color: white;
+      font-weight: bold;
+    }
+    .item-card {
+      display: flex;
+      align-items: center;
+      background: #fffafa;
+      margin-top: 10px;
+      padding: 15px;
+      border-radius: 15px;
+      border: 1px solid #ffe4e1;
+    }
+    .item-card img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-right: 15px;
+    }
+    .item-details h4 {
+      margin: 0 0 5px 0;
+      color: #d1497b;
+    }
+    .item-details p {
+      margin: 0;
+      font-size: 0.9em;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="text-align: center; color: #d1497b;">My Closet</h2>
+    
+    <select id="category">
+      <option value="" disabled selected>アイテムの種類を選択</option>
+      <option value="トップス">トップス</option>
+      <option value="ボトムス">ボトムス（スカート・パンツなど）</option>
+      <option value="ワンピース">ワンピース</option>
+      <option value="アウター">アウター</option>
+      <option value="バッグ">バッグ</option>
+      <option value="靴">靴</option>
+      <option value="アクセサリー・小物">アクセサリー・小物</option>
+    </select>
+    
+    <input type="text" id="itemName" placeholder="アイテム名（例: プリーツスカート）">
+    <input type="text" id="brandName" placeholder="ブランド名（空欄の場合はノーブランド）">
+    
+    <select id="frequency">
+      <option value="普段使い（週2〜3回）">使用頻度: 普段使い</option>
+      <option value="お出かけ・カフェ用">使用頻度: お出かけ・カフェ用</option>
+      <option value="遠征・イベント用">使用頻度: 遠征・イベント用</option>
+    </select>
+    
+    <input type="file" id="imageInput" accept="image/*">
+    <button class="add-btn" onclick="addItem()">クローゼットに追加</button>
 
+    <!-- タブ表示エリア -->
+    <div id="categoryTabs" class="tabs-container"></div>
+    
+    <!-- アイテム一覧エリア -->
+    <div id="itemList"></div>
+  </div>
+
+  <script>
+    // 登録されたアイテムを保存する配列
+    let items = [];
+    // 現在選択されているタブ（初期値は'All'）
+    let currentFilter = 'All';
+
+    function addItem() {
+      const categorySelect = document.getElementById('category');
+      const category = categorySelect.value;
+      const name = document.getElementById('itemName').value;
+      let brand = document.getElementById('brandName').value.trim();
+      const freq = document.getElementById('frequency').value;
+      const imageInput = document.getElementById('imageInput');
+      
+      if (!category) return alert('アイテムの種類を選択してください');
+      if (!name) return alert('アイテム名を入力してください');
+      if (!brand) brand = 'ノーブランド';
+
+      let imageUrl = 'https://via.placeholder.com/70/ffb6c1/ffffff?text=No+Img';
+      if (imageInput.files && imageInput.files[0]) {
+        imageUrl = URL.createObjectURL(imageInput.files[0]);
+      }
+
+      // アイテムを配列に追加
+      items.push({ category, name, brand, freq, imageUrl });
+
+      // 入力欄をリセット (カテゴリは連続入力を考慮してそのままにするか、初期化するか選べますが今回は初期化します)
+      categorySelect.value = '';
+      document.getElementById('itemName').value = '';
+      document.getElementById('brandName').value = '';
+      imageInput.value = '';
+
+      // 画面を再描画
+      render();
+    }
+
+    function setFilter(category) {
+      currentFilter = category;
+      render();
+    }
+
+    function render() {
+      const tabsContainer = document.getElementById('categoryTabs');
+      const list = document.getElementById('itemList');
+      
+      // 登録されているアイテムから重複のないカテゴリ一覧を作成
+      const categories = ['All', ...new Set(items.map(item => item.category))];
+      
+      // タブの描画
+      tabsContainer.innerHTML = '';
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = `tab ${cat === currentFilter ? 'active' : ''}`;
+        btn.innerText = cat === 'All' ? 'すべて' : cat;
+        btn.onclick = () => setFilter(cat);
+        tabsContainer.appendChild(btn);
+      });
+
+      // アイテムの描画（選択中のタブで絞り込み）
+      list.innerHTML = '';
+      items.filter(item => currentFilter === 'All' || item.category === currentFilter)
+           .forEach(item => {
+             const card = document.createElement('div');
+             card.className = 'item-card';
+             card.innerHTML = `
+               <img src="${item.imageUrl}" alt="item">
+               <div class="item-details">
+                 <h4>${item.name}</h4>
+                 <p>ブランド: ${item.brand}</p>
+                 <p>${item.freq}</p>
+               </div>
+             `;
+             list.appendChild(card);
+           });
+    }
+
+    // 初回読み込み時の描画
+    render();
+  </script>
+</body>
+</html>
